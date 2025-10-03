@@ -35,7 +35,7 @@
     <!-- データが取得できたときにdl要素を表示する -->
     <label
       >地域：
-      <select>
+      <select v-model="area">
         <option value="130">東京</option>
         <option value="270">大阪</option>
       </select>
@@ -43,23 +43,25 @@
 
     <label
       >チャンネル：
-      <select>
+      <select v-model="service">
         <option value="g1">NHK 総合1</option>
         <option value="s1">NHK BS1</option>
         <option value="r3">NHK FM</option>
       </select>
     </label>
 
-    <table>
+    <button @click="getProgramList">番組表取得</button>
+
+    <table v-if="list">
       <tr>
         <th>時刻</th>
         <th>タイトル</th>
         <th>内容</th>
       </tr>
-      <tr>
-        <td></td>
-        <td></td>
-        <td></td>
+      <tr v-for="(program, index) in list" :key="program.id">
+        <td>{{ formatTime(index) }}</td>
+        <td>{{ program.title }}</td>
+        <td>{{ program.subtitle }}</td>
       </tr>
     </table>
   </body>
@@ -69,10 +71,40 @@
       return {
         // 変数（プロパティ）
         list: false,
-        apikey: 'NIez5umCKhwROMh9FMSGTxQe40tKJGWa' // 自分で取得する
+        apikey: 'NIez5umCKhwROMh9FMSGTxQe40tKJGWa', // 自分で取得する
+        area: '270', // 大阪
+        service: 'g1', // NHK総合1
 
-        // 関数（メソッド）
+        async getProgramList() {
+          const today = new Date();
+          const year = today.getFullYear();
+          const month = String(today.getMonth() + 1).padStart(2, '0');
+          const day = String(today.getDate()).padStart(2, '0');
+          const date = `${year}-${month}-${day}`;
+
+          const url = `https://api.nhk.or.jp/v2/pg/list/${this.area}/${this.service}/${date}.json?key=${this.apikey}`;
+
+          try {
+            const response = await fetch(url);
+            const data = await response.json();
+            this.list = data.list[this.service];
+          } catch (error) {
+            console.error('Fetch error:', error);
+            this.list = false;
+          }
+        },
+        formatTime(index) {
+          if (!this.list || !this.list[index]) return '';
+          const startTime = this.list[index].start_time;
+          const timePart = startTime.split('T')[1];
+          const timeComponents = timePart.split(':');
+          return `${timeComponents[0]}:${timeComponents[1]}`;
+        }
       };
     }
+    // petite-vue v0.4.xのための設定
+    window.programApp = programApp;
+    // 関数（メソッド）
+    petiteVue.createApp({ dataset }).mount();
   </script>
 </html>
